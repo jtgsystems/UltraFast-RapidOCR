@@ -117,3 +117,20 @@ HyperOCR is built on top of world-class open-source computer vision research and
 - **[PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)** (Apache 2.0 License) — Ultra-lightweight OCR architectures.
 - **[ONNX Runtime](https://github.com/microsoft/onnxruntime)** (MIT License) — High-performance cross-platform machine learning accelerator.
 - **[MSS](https://github.com/BoboTiG/python-mss)** (MIT License) — Ultra-fast cross-platform screen capture.
+
+---
+
+## 🎬 Video OCR & Subtitle Extraction
+
+HyperOCR can scan video files (`.mp4`, `.mkv`, `.avi`, `.mov`) or screen recordings to automatically detect on-screen slides, burnt-in subtitles, code, and text changes:
+
+```bash
+# Scan a video file and display on-screen text with timestamps:
+hyper-ocr video presentation.mp4
+
+# Extract text and generate standard .srt subtitle file:
+hyper-ocr video demo.mp4 --srt captions.srt
+
+# Extract timestamped text transcript:
+hyper-ocr video tutorial.mp4 --out transcript.txt
+```

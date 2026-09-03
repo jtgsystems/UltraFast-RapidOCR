@@ -6,9 +6,11 @@ import numpy as np
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
 from .engine import HyperOCREngine
 from .screen import ScreenCapturer
 from .ai_corrector import decrypt_handwriting_with_vision
+from .video import VideoTextExtractor
 
 console = Console()
 
@@ -39,7 +41,7 @@ def copy_to_clipboard(text: str):
 def main():
     parser = argparse.ArgumentParser(
         prog="hyper-ocr",
-        description="JTG Systems - HyperOCR: Ultra-Fast Real-Time OCR & AI Handwriting Decryptor (SOTA 2026)"
+        description="JTG Systems - HyperOCR: Ultra-Fast Real-Time OCR, Video Text & Subtitle Extractor (SOTA 2026)"
     )
     subparsers = parser.add_subparsers(dest="command")
     
@@ -48,6 +50,13 @@ def main():
     scan_p.add_argument("file", help="Path to image file")
     scan_p.add_argument("--ai", action="store_true", help="Enable Vision AI handwriting decryption for messy scribbles")
     scan_p.add_argument("--copy", action="store_true", help="Copy extracted text to clipboard")
+    
+    # Video command
+    video_p = subparsers.add_parser("video", help="Extract on-screen text and subtitles from video files (MP4/MKV/AVI)")
+    video_p.add_argument("file", help="Path to video file")
+    video_p.add_argument("--fps", type=float, default=2.0, help="Sampling frequency in FPS (default: 2.0)")
+    video_p.add_argument("--srt", help="Optional path to export .srt subtitle file")
+    video_p.add_argument("--out", help="Optional path to export .txt transcript")
     
     # Screen capture command
     snip_p = subparsers.add_parser("snip", help="Capture full screen or region and extract text")
@@ -59,7 +68,46 @@ def main():
     
     args = parser.parse_args()
     
-    if args.command == "scan":
+    if args.command == "video":
+        if not os.path.exists(args.file):
+            console.print(f"[red]Error: Video file '{args.file}' not found![/red]")
+            sys.exit(1)
+            
+        console.print(f"🎬 [bold cyan]Processing Video OCR:[/bold cyan] {args.file} (Sampling at {args.fps} FPS)...")
+        extractor = VideoTextExtractor(sample_fps=args.fps)
+        
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            console=console
+        ) as progress:
+            task = progress.add_task("[green]Scanning frames...", total=100)
+            
+            def on_prog(pct, count):
+                progress.update(task, completed=int(pct * 100), description=f"[green]Scanning video frames... ({count} text events found)")
+                
+            timeline = extractor.extract_from_video(args.file, progress_cb=on_prog)
+            progress.update(task, completed=100)
+            
+        table = Table(title=f"Extracted Video Timeline ({len(timeline)} events)", border_style="cyan")
+        table.add_column("Timestamp", style="bold yellow", width=12)
+        table.add_column("On-Screen Text Content", style="white")
+        
+        for item in timeline:
+            table.add_row(item["timestamp"], item["text"])
+            
+        console.print(table)
+        
+        if args.srt:
+            extractor.export_srt(timeline, args.srt)
+            console.print(f"[bold green]✓ Exported subtitles to: {args.srt}[/bold green]")
+        if args.out:
+            extractor.export_transcript(timeline, args.out)
+            console.print(f"[bold green]✓ Exported transcript to: {args.out}[/bold green]")
+            
+    elif args.command == "scan":
         if not os.path.exists(args.file):
             console.print(f"[red]Error: File '{args.file}' not found![/red]")
             sys.exit(1)
