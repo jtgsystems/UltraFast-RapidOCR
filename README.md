@@ -105,3 +105,15 @@ Double-click `HYPEROCR.BAT` or run `HYPEROCR.BAT snip` in Command Prompt.
 ## 📜 License
 
 MIT License © 2026 [JTG Systems](https://jtgsystems.com).
+
+---
+
+## 🤝 Open Source Credits & Acknowledgements
+
+HyperOCR is built on top of world-class open-source computer vision research and runtime foundations:
+
+- **[RapidOCR](https://github.com/RapidAI/RapidOCR)** (Apache 2.0 License) — Cross-platform ONNX OCR runtime.
+- **[EasyOCR](https://github.com/JaidedAI/EasyOCR)** (Apache 2.0 License) — PyTorch deep learning text detection and recognition.
+- **[PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)** (Apache 2.0 License) — Ultra-lightweight OCR architectures.
+- **[ONNX Runtime](https://github.com/microsoft/onnxruntime)** (MIT License) — High-performance cross-platform machine learning accelerator.
+- **[MSS](https://github.com/BoboTiG/python-mss)** (MIT License) — Ultra-fast cross-platform screen capture.
