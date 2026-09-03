@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=80.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,6 +9,14 @@ description = "Ultra-Fast Hardware-Accelerated Real-Time OCR & Screen Text Extra
 readme = "README.md"
 authors = [{ name = "JTG Systems", email = "jtgsystems@gmail.com" }]
 license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=2.0,<3",
+    "opencv-python-headless>=4.10,<5",
+    "rapidocr-onnxruntime>=1.2,<2",
+    "requests>=2.31,<3",
+    "rich>=13.7,<15",
+]
 keywords = [
     "ocr", "real-time-ocr", "rapidocr", "easyocr", "cuda-ocr",
     "screen-text-extractor", "gpu-accelerated", "jtgsystems"
