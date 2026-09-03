@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hyper-ocr"
+version = "3.0.0"
+description = "Ultra-Fast Hardware-Accelerated Real-Time OCR & Screen Text Extractor"
+readme = "README.md"
+authors = [{ name = "JTG Systems", email = "jtgsystems@gmail.com" }]
+license = { text = "MIT" }
+keywords = [
+    "ocr", "real-time-ocr", "rapidocr", "easyocr", "cuda-ocr",
+    "screen-text-extractor", "gpu-accelerated", "jtgsystems"
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3"
+]
+
+[project.urls]
+Homepage = "https://jtgsystems.com"
+Repository = "https://github.com/jtgsystems/UltraFast-RapidOCR"
+
+[project.scripts]
+hyper-ocr = "hyper_ocr.cli:main"
+hocr = "hyper_ocr.cli:main"
