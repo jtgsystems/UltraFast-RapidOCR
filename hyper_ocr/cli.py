@@ -8,6 +8,7 @@ from rich.table import Table
 from rich.panel import Panel
 from .engine import HyperOCREngine
 from .screen import ScreenCapturer
+from .ai_corrector import decrypt_handwriting_with_vision
 
 console = Console()
 
@@ -38,13 +39,14 @@ def copy_to_clipboard(text: str):
 def main():
     parser = argparse.ArgumentParser(
         prog="hyper-ocr",
-        description="JTG Systems - HyperOCR: Ultra-Fast Real-Time OCR & Screen Text Extractor (SOTA 2026)"
+        description="JTG Systems - HyperOCR: Ultra-Fast Real-Time OCR & AI Handwriting Decryptor (SOTA 2026)"
     )
     subparsers = parser.add_subparsers(dest="command")
     
     # Scan command
     scan_p = subparsers.add_parser("scan", help="Scan an image file or screenshot")
     scan_p.add_argument("file", help="Path to image file")
+    scan_p.add_argument("--ai", action="store_true", help="Enable Vision AI handwriting decryption for messy scribbles")
     scan_p.add_argument("--copy", action="store_true", help="Copy extracted text to clipboard")
     
     # Screen capture command
@@ -62,6 +64,18 @@ def main():
             console.print(f"[red]Error: File '{args.file}' not found![/red]")
             sys.exit(1)
             
+        if args.ai:
+            console.print(f"🧠 [bold purple]AI Vision Handwriting Mode:[/bold purple] Decrypting {args.file}...")
+            ai_text = decrypt_handwriting_with_vision(args.file)
+            if ai_text:
+                console.print(Panel(ai_text, title="[bold green]✓ Decrypted Handwriting Transcription[/bold green]", border_style="green"))
+                if args.copy:
+                    copy_to_clipboard(ai_text)
+                    console.print("[bold green]✓ Copied transcription to clipboard![/bold green]")
+                return
+            else:
+                console.print("[yellow]Vision AI offline, falling back to Fast Optical OCR...[/yellow]")
+                
         img = cv2.imread(args.file)
         if img is None:
             console.print(f"[red]Error: Could not decode image '{args.file}'![/red]")
