@@ -41,7 +41,7 @@ def copy_to_clipboard(text: str):
 def main():
     parser = argparse.ArgumentParser(
         prog="hyper-ocr",
-        description="JTG Systems - HyperOCR: Ultra-Fast Real-Time OCR, Video Text & Subtitle Extractor (SOTA 2026)"
+        description="JTG Systems - HyperOCR: Ultra-Fast Real-Time OCR, Video & TikTok URL Extractor (SOTA 2026)"
     )
     subparsers = parser.add_subparsers(dest="command")
     
@@ -52,7 +52,7 @@ def main():
     scan_p.add_argument("--copy", action="store_true", help="Copy extracted text to clipboard")
     
     # Video command
-    video_p = subparsers.add_parser("video", help="Extract on-screen text and subtitles from video files (MP4/MKV/AVI)")
+    video_p = subparsers.add_parser("video", help="Extract text, URLs, and subtitles from TikTok, Reels, MP4 videos")
     video_p.add_argument("file", help="Path to video file")
     video_p.add_argument("--fps", type=float, default=2.0, help="Sampling frequency in FPS (default: 2.0)")
     video_p.add_argument("--srt", help="Optional path to export .srt subtitle file")
@@ -73,7 +73,7 @@ def main():
             console.print(f"[red]Error: Video file '{args.file}' not found![/red]")
             sys.exit(1)
             
-        console.print(f"🎬 [bold cyan]Processing Video OCR:[/bold cyan] {args.file} (Sampling at {args.fps} FPS)...")
+        console.print(f"🎬 [bold cyan]Processing Video / TikTok OCR:[/bold cyan] {args.file} (Sampling at {args.fps} FPS)...")
         extractor = VideoTextExtractor(sample_fps=args.fps)
         
         with Progress(
@@ -88,9 +88,10 @@ def main():
             def on_prog(pct, count):
                 progress.update(task, completed=int(pct * 100), description=f"[green]Scanning video frames... ({count} text events found)")
                 
-            timeline = extractor.extract_from_video(args.file, progress_cb=on_prog)
+            res = extractor.extract_from_video(args.file, progress_cb=on_prog)
             progress.update(task, completed=100)
             
+        timeline = res["timeline"]
         table = Table(title=f"Extracted Video Timeline ({len(timeline)} events)", border_style="cyan")
         table.add_column("Timestamp", style="bold yellow", width=12)
         table.add_column("On-Screen Text Content", style="white")
@@ -100,6 +101,26 @@ def main():
             
         console.print(table)
         
+        # Display extracted URLs and Phone entities
+        if res["urls"] or res["phones"] or res["emails"]:
+            entity_lines = []
+            if res["urls"]:
+                entity_lines.append("[bold cyan]🔗 Detected URLs:[/bold cyan]")
+                for u in res["urls"]: entity_lines.append(f"   • {u}")
+            if res["phones"]:
+                entity_lines.append("[bold green]📞 Detected Phone Numbers:[/bold green]")
+                for p in res["phones"]: entity_lines.append(f"   • {p}")
+            if res["emails"]:
+                entity_lines.append("[bold yellow]📧 Detected Emails:[/bold yellow]")
+                for e in res["emails"]: entity_lines.append(f"   • {e}")
+                
+            console.print(Panel("\n".join(entity_lines), title="[bold gold1]🎯 Extracted Actionable Entities[/bold gold1]", border_style="gold1"))
+            
+            # Copy detected URLs directly to clipboard
+            if res["urls"]:
+                copy_to_clipboard(res["urls"][0])
+                console.print(f"[bold green]✓ Copied primary URL ({res['urls'][0]}) to clipboard![/bold green]")
+                
         if args.srt:
             extractor.export_srt(timeline, args.srt)
             console.print(f"[bold green]✓ Exported subtitles to: {args.srt}[/bold green]")

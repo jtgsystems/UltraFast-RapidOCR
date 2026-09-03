@@ -1,15 +1,16 @@
 import cv2
 import time
 import os
+import re
 import json
 from typing import List, Dict, Any, Optional, Callable
 from .engine import HyperOCREngine
 
 class VideoTextExtractor:
     """
-    SOTA 2026 Video OCR & On-Screen Text/Subtitle Extractor.
-    Extracts text from MP4/MKV/AVI video files, webcam streams, and screen recordings
-    with automatic scene-change detection and timestamping.
+    SOTA 2026 Video OCR & On-Screen Text/Subtitle/URL Extractor.
+    Extracts text, URLs, phone numbers, and subtitles from TikTok, Reels,
+    YouTube Shorts, MP4 files, and live screen feeds.
     """
     def __init__(self, engine: Optional[HyperOCREngine] = None, sample_fps: float = 2.0):
         self.engine = engine or HyperOCREngine()
@@ -20,9 +21,9 @@ class VideoTextExtractor:
         video_path: str,
         output_format: str = "txt",
         progress_cb: Optional[Callable[[float, int], None]] = None
-    ) -> List[Dict[str, Any]]:
+    ) -> Dict[str, Any]:
         """
-        Processes a video file and returns all timestamped text events.
+        Processes a video file and returns all timestamped text events and extracted entities.
         """
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
@@ -32,10 +33,13 @@ class VideoTextExtractor:
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         duration_sec = total_frames / fps if total_frames > 0 else 0
         
-        # Determine frame skip step for desired sample FPS
         step = max(1, int(fps / self.sample_fps))
         
         timeline = []
+        found_urls = set()
+        found_phones = set()
+        found_emails = set()
+        
         frame_idx = 0
         last_seen_text = ""
         
@@ -46,12 +50,10 @@ class VideoTextExtractor:
                 
             if frame_idx % step == 0:
                 timestamp_sec = frame_idx / fps
-                # Run OCR with temporal differencing cache
                 results, lat = self.engine.recognize(frame, use_cache=True)
                 
                 if results:
                     current_text = " ".join([r["text"] for r in results]).strip()
-                    # Only record if text changed or new content appeared
                     if current_text and current_text != last_seen_text:
                         timestamp_str = time.strftime('%H:%M:%S', time.gmtime(timestamp_sec))
                         timeline.append({
@@ -63,13 +65,29 @@ class VideoTextExtractor:
                         })
                         last_seen_text = current_text
                         
+                        # Extract URLs, Phones, Emails
+                        urls = re.findall(r'(?:https?://|www\.)[^\s,]+', current_text, re.IGNORECASE)
+                        for u in urls: found_urls.add(u.strip(".,;:?!'\""))
+                        
+                        phones = re.findall(r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}', current_text)
+                        for p in phones: found_phones.add(p.strip())
+                        
+                        emails = re.findall(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', current_text)
+                        for e in emails: found_emails.add(e.strip())
+                        
                 if progress_cb and total_frames > 0:
                     progress_cb(frame_idx / total_frames, len(timeline))
                     
             frame_idx += 1
             
         cap.release()
-        return timeline
+        return {
+            "duration_sec": round(duration_sec, 2),
+            "timeline": timeline,
+            "urls": sorted(list(found_urls)),
+            "phones": sorted(list(found_phones)),
+            "emails": sorted(list(found_emails))
+        }
 
     @staticmethod
     def export_srt(timeline: List[Dict[str, Any]], output_path: str):
@@ -77,7 +95,7 @@ class VideoTextExtractor:
         with open(output_path, "w", encoding="utf-8") as f:
             for idx, item in enumerate(timeline, 1):
                 start_sec = item["timestamp_sec"]
-                end_sec = start_sec + 2.0  # Display for 2 seconds
+                end_sec = start_sec + 2.0
                 
                 start_srt = time.strftime('%H:%M:%S', time.gmtime(start_sec)) + f",{int((start_sec % 1) * 1000):03d}"
                 end_srt = time.strftime('%H:%M:%S', time.gmtime(end_sec)) + f",{int((end_sec % 1) * 1000):03d}"
